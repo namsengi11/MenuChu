@@ -9,13 +9,14 @@ class UI:
     
     def takeAnswer(self):
         userAnswer = input()
-        if userAnswer in self.affirmative:
-            return True
-        elif userAnswer in self.negative:
-            return False
-        else:
-            print("To accept recommendation, please reply with ", self.affirmative, \
-                  "\nTo disapprove, reply with ", self.negative)
+        while True:
+            if userAnswer in self.affirmative:
+                return True
+            elif userAnswer in self.negative:
+                return False
+            else:
+                print("To accept recommendation, please reply with ", self.affirmative, \
+                    "\nTo disapprove, reply with ", self.negative)
     
     def proposeFood(self, food: str):
         print("How about %s?" % food)

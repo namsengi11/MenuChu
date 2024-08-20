@@ -18,7 +18,11 @@ class Menuchu:
                 satisfied = True
             else:
                 self.recommender.rejectFood(proposal)
-                proposal = self.recommender.recRandomFood()
+                try:
+                    proposal = self.recommender.recTopChoices()
+                except Exception:
+                    print("Restart Recommendation")
+                    Menuchu().main()
                 self.UI.proposeFood(proposal)
         
         print("I'm glad I found the right menu for you!!")
