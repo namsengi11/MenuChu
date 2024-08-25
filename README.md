@@ -16,4 +16,7 @@
    - If rejected, keep record of rejected food and recommend other foods in the database that has the furthest vector distance.
 5. (Future) After recommendation algorithm/database is build, create tinder-like frontend
    - Swipe left/right until accepted
+6. Crawl food blogs and food wikis
+   - Parse descriptions and words that are often associated with it
+   - Use word association to create database
    
