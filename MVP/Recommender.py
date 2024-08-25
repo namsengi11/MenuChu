@@ -4,11 +4,11 @@ import heapq
 
 from numpy import dot
 from numpy.linalg import norm
-from scipy.spatial.distance import euclidean
 
 class Recommender:
     def __init__(self) -> None:
         self.foodPool = pd.read_csv('./data.csv')
+        # self.foodPool = pd.read_csv('./testdata.csv')
         self.numFoodPool = self.foodPool.drop(columns=['Name'])
         self.rejectedVector = pd.Series([0]*(len(self.numFoodPool.columns)),index=self.numFoodPool.columns)
         self.rejectedCnt = 0
@@ -38,28 +38,37 @@ class Recommender:
         print(self.foodPool)
     
     def recTopChoices(self):
-        pq = []
+        pq = [] # Max Heap
         for index, row in self.foodPool.iterrows():
-            if len(pq) < 5:
-                heapq.heappush(pq, (-row['Distance'], row['Name']))
-            elif pq[0][0] > -row['Distance']:
-                heapq.heapreplace(pq, (-row['Distance'], row['Name']))
-        print(self.rejectedVector)
+            if row['Name'] not in self.rejectedFood:
+                if len(pq) < 3:
+                    heapq.heappush(pq, (-row['Distance'], row['Name']))
+                elif -pq[0][0] > -row['Distance']:
+                    heapq.heapreplace(pq, (-row['Distance'], row['Name']))
+        pq.sort()
         print(pq)
         options = [name for dist, name in pq]
+        if len(options) < 3:
+            raise Exception("No suitable food, restart")
         return self.recRandomFood(options)
 
     def recRandomFood(self, pool=None):
         recFood = ""
         if pool:
-            randomIndex = random.randint(0, len(pool) - 1)
-            recFood = pool[randomIndex]
+            randomIndex = random.randint(0, 2 * len(pool) - 1)
+            if randomIndex > len(pool):
+                recFood = pool[-1]
+            elif randomIndex > len(pool) // 2:
+                recFood = pool[-2]
+            else:
+                recFood = pool[-3]
+            
         else: # Initial random recommendation without pool
             randomIndex = random.randint(0, len(self.foodPool) - 1)
             return self.foodPool.iloc[randomIndex]['Name']
         
         if recFood in self.rejectedFood:
-            for food in pool:
+            for food in pool[::-1]:
                 if food not in self.rejectedFood:
                     return food
             # All recommendations are not accepted, start again
