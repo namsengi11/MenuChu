@@ -7,46 +7,64 @@ from numpy.linalg import norm
 
 class Recommender:
     def __init__(self) -> None:
-        self.foodPool = pd.read_csv('./data.csv')
-        # self.foodPool = pd.read_csv('./testdata.csv')
-        self.numFoodPool = self.foodPool.drop(columns=['Name'])
-        self.rejectedVector = pd.Series([0]*(len(self.numFoodPool.columns)),index=self.numFoodPool.columns)
+        self.foodPool = pd.read_csv('./FoodName.csv')
+        self.foodFlavor = pd.read_csv('./Flavor.csv')
+        self.foodType = pd.read_csv('./FoodType.csv')
+        self.rejectedFlavorVector = pd.Series([0]*(len(self.foodFlavor.columns.drop('id'))), index=self.foodFlavor.columns.drop('id'))
+        self.rejectedTypeVector = pd.Series([0]*(len(self.foodType.columns.drop('id'))), index=self.foodType.columns.drop('id'))
         self.rejectedCnt = 0
         self.rejectedFood = set()
+        self.flavorWeight = 0.6
+        self.typeWeight = 0.4
+
 
     def rejectFood(self, food: str):
-        self.rejectedVector *= self.rejectedCnt
-        foodRow = self.foodPool[self.foodPool['Name'] == food]
-        currRejectedFood = foodRow.iloc[0].drop(columns=['Names'])
-        self.rejectedVector += currRejectedFood
+        def adjustVectorAverage(vector, cnt, newVector):
+            vector *= cnt
+            vector += newVector
+            vector /= cnt + 1
+            return vector
+        rejectedFoodId = int(self.foodPool[self.foodPool['Name'] == food]['id'].iloc[0])
+        rejectedFoodFlavorV = self.foodFlavor[self.foodFlavor['id'] == rejectedFoodId].iloc[0].drop('id')
+        rejectedFoodTypeV = self.foodType[self.foodType['id'] == rejectedFoodId].iloc[0].drop('id')
+
+        # Recalculate vector representing rejected foods
+        self.rejectedFlavorVector = adjustVectorAverage(self.rejectedFlavorVector, self.rejectedCnt, rejectedFoodFlavorV)
+        self.rejectedTypeVector = adjustVectorAverage(self.rejectedTypeVector, self.rejectedCnt, rejectedFoodTypeV)
+
         self.rejectedCnt += 1
-        self.rejectedVector /= self.rejectedCnt
         self.rejectedFood.add(food)
         self.recalculateDist()
 
     def recalculateDist(self):
-        # Calculate distances 
+        # Calculate distances
         # Euclidean dist - what does axis do???
         # distances = self.numFoodPool.apply(lambda row: euclidean(self.rejectedVector, row), axis=1)
 
         # Cosine dist
-        distances = self.numFoodPool.apply(lambda row: dot(row, self.rejectedVector) \
-                                           /(norm(row)*norm(self.rejectedVector)), axis=1)
+        flavorDistances = self.foodFlavor.drop('id', axis=1) \
+            .apply(lambda row: dot(row, self.rejectedFlavorVector)\
+                    /(norm(row)*norm(self.rejectedFlavorVector)), axis=1)
+        typeDistances = self.foodType.drop('id', axis=1) \
+            .apply(lambda row: dot(row, self.rejectedTypeVector)\
+                    /(norm(row)*norm(self.rejectedTypeVector)), axis=1)
 
         # Add distances to the DataFrame
-        self.foodPool['Distance'] = distances
+        self.foodPool['flavorDist'] = flavorDistances
+        self.foodPool['typeDist'] = typeDistances
+
         print(self.foodPool)
-    
+
     def recTopChoices(self):
         pq = [] # Max Heap
         for index, row in self.foodPool.iterrows():
+            dist = row['flavorDist'] * self.flavorWeight + row['typeDist'] * self.typeWeight
             if row['Name'] not in self.rejectedFood:
                 if len(pq) < 3:
-                    heapq.heappush(pq, (-row['Distance'], row['Name']))
-                elif -pq[0][0] > -row['Distance']:
-                    heapq.heapreplace(pq, (-row['Distance'], row['Name']))
+                    heapq.heappush(pq, (-dist, row['Name']))
+                elif -pq[0][0] > -dist:
+                    heapq.heapreplace(pq, (-dist, row['Name']))
         pq.sort()
-        print(pq)
         options = [name for dist, name in pq]
         if len(options) < 3:
             raise Exception("No suitable food, restart")
@@ -62,11 +80,11 @@ class Recommender:
                 recFood = pool[-2]
             else:
                 recFood = pool[-3]
-            
+
         else: # Initial random recommendation without pool
             randomIndex = random.randint(0, len(self.foodPool) - 1)
             return self.foodPool.iloc[randomIndex]['Name']
-        
+
         if recFood in self.rejectedFood:
             for food in pool[::-1]:
                 if food not in self.rejectedFood:

@@ -24,9 +24,9 @@ class Menuchu:
                     print("Restart Recommendation")
                     Menuchu().main()
                 self.UI.proposeFood(proposal)
-        
+
         print("I'm glad I found the right menu for you!!")
-    
+
 if __name__ == "__main__":
     Menuchu().main()
 
