@@ -1,5 +1,8 @@
 # MenuChu
 
+#WIP
+Provide Menu Recommendation service to those that have inconveniences in making the day-to-day decision
+
 ## Plan
 1. CLI program that takes in user input and returns results
    - Python for easy data management and analysis
